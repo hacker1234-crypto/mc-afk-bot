@@ -50,3 +50,14 @@ function createBot() {
 }
 
 createBot();
+// SELF-PING SYSTEM
+const https = require('https');
+const MY_RENDER_URL = 'https://onrender.com'; 
+
+setInterval(() => {
+    https.get(MY_RENDER_URL, (res) => {
+        console.log('Self-ping: Keep-alive signal sent to Render');
+    }).on('error', (err) => {
+        console.log('Self-ping failed: ' + err.message);
+    });
+}, 300000); // Pings every 5 minutes
