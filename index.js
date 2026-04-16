@@ -8,7 +8,7 @@ http.createServer((req, res) => {
 }).listen(process.env.PORT || 8080);
 
 const bot = mineflayer.createBot({
-  host: 'LordSMP.play.hosting', 
+  host: 'REGNAROKSMP.play.hosting', 
   port: 25565,
   username: 'Regnarok_Bot' 
 });
