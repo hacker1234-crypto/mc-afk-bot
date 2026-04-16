@@ -1,63 +1,84 @@
 const http = require('http');
+const https = require('https');
 const mineflayer = require('mineflayer');
 
-// 1. Keep the bot alive on Render
-http.createServer((req, res) => {
-  res.write('AFK Bot is running!');
-  res.end();
-}).listen(process.env.PORT || 8080);
+// 1. STABLE WEB SERVER (Tricks Render into staying alive)
+const MY_URL = 'https://onrender.com';
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is standing guard!\n');
+});
 
+server.listen(process.env.PORT || 8080, () => {
+    console.log('Web server is ready.');
+});
+
+// SELF-PING: Every 5 minutes to stay ahead of Render's 15-min sleep
+setInterval(() => {
+    https.get(MY_URL, (res) => {
+        console.log('Heartbeat sent to Render.');
+    }).on('error', (e) => console.log('Heartbeat failed.'));
+}, 300000);
+
+// 2. MINECRAFT BOT SETTINGS
 const botOptions = {
     host: 'REGNAROKSMP.play.hosting',
     port: 25565,
-    username: 'AFK'
+    username: 'Regnarok_Bot',
+    version: false // This lets the bot auto-detect the Minecraft version
 };
 
 function createBot() {
+    console.log('Attempting to join the server...');
     const bot = mineflayer.createBot(botOptions);
 
+    // 3. HUMAN-LIKE MOVEMENTS (To bypass AFK Detectors)
     bot.on('spawn', () => {
-        console.log('Bot joined! Starting Anti-Kick movements...');
+        console.log('Bot is in the world.');
         
-        // 2. ANTI-AFK MOVEMENT: Prevents "Idle" kicks
         setInterval(() => {
-            bot.setControlState('jump', true);
-            setTimeout(() => bot.setControlState('jump', false), 500);
-        }, 60000); // Jumps every 60 seconds
+            if (!bot.entity) return;
+            
+            // Randomly pick an action: Jump, Look, or Walk
+            const action = Math.floor(Math.random() * 3);
+            if (action === 0) {
+                bot.setControlState('jump', true);
+                setTimeout(() => bot.setControlState('jump', false), 500);
+            } else if (action === 1) {
+                bot.look(Math.random() * 6.28, (Math.random() - 0.5) * 1.5);
+            } else {
+                bot.setControlState('forward', true);
+                setTimeout(() => {
+                    bot.setControlState('forward', false);
+                    bot.setControlState('back', true);
+                    setTimeout(() => bot.setControlState('back', false), 500);
+                }, 500);
+            }
+        }, 45000); // Does a random action every 45 seconds
     });
 
-    // 3. AUTO-AUTH
+    // 4. AUTO-AUTH (AuthMe / Login)
     bot.on('message', (message) => {
-        const msg = message.toString().toLowerCase();
-        if (msg.includes('/register')) bot.chat('/register chingyai chingyai');
-        else if (msg.includes('/login')) bot.chat('/login chingyai');
+        const msg = message.toString();
+        console.log('Server:', msg); // This shows server messages in your Render logs
+        
+        if (msg.includes('/register')) {
+            bot.chat('/register chingyai chingyai');
+        } else if (msg.includes('/login')) {
+            bot.chat('/login chingyai');
+        }
     });
 
-    // 4. STAY FOREVER REJOIN: Handles kicks AND disconnects
-    bot.on('kicked', (reason) => {
-        console.log('Kicked for:', reason, 'Rejoining in 5s...');
-    });
-
-    bot.on('end', () => {
-        console.log('Disconnected! Reconnecting to server...');
-        setTimeout(createBot, 5000); // Tries to rejoin every 5 seconds forever
+    // 5. THE "NEVER GIVE UP" RECONNECT
+    bot.on('end', (reason) => {
+        console.log(`Bot disconnected: ${reason}. Rejoining in 20s...`);
+        setTimeout(createBot, 20000);
     });
 
     bot.on('error', (err) => {
-        console.log('Error:', err, 'Retrying...');
-        setTimeout(createBot, 10000);
+        console.log('Error encountered. Rejoining...');
+        setTimeout(createBot, 20000);
     });
 }
 
 createBot();
-// SELF-PING SYSTEM
-const https = require('https');
-const MY_RENDER_URL = 'https://onrender.com'; 
-
-setInterval(() => {
-    https.get(MY_RENDER_URL, (res) => {
-        console.log('Self-ping: Keep-alive signal sent to Render');
-    }).on('error', (err) => {
-        console.log('Self-ping failed: ' + err.message);
-    });
-}, 300000); // Pings every 5 minutes
