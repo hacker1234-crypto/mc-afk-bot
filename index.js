@@ -8,42 +8,43 @@ http.createServer((req, res) => {
 }).listen(process.env.PORT || 8080);
 
 const botOptions = {
-    host: 'REGNAROKSMP.play.hosting', // Corrected IP
+    host: 'REGNAROKSMP.play.hosting',
     port: 25565,
-    username: '.t'
+    username: 'AFK'
 };
 
 function createBot() {
     const bot = mineflayer.createBot(botOptions);
 
-    bot.on('login', () => {
-        console.log('Bot logged into the server!');
+    bot.on('spawn', () => {
+        console.log('Bot joined! Starting Anti-Kick movements...');
+        
+        // 2. ANTI-AFK MOVEMENT: Prevents "Idle" kicks
+        setInterval(() => {
+            bot.setControlState('jump', true);
+            setTimeout(() => bot.setControlState('jump', false), 500);
+        }, 60000); // Jumps every 60 seconds
     });
 
-    // 2. AUTO-AUTH SYSTEM (Register/Login)
+    // 3. AUTO-AUTH
     bot.on('message', (message) => {
         const msg = message.toString().toLowerCase();
-        
-        // If the server asks to register
-        if (msg.includes('/register')) {
-            console.log('Registering with password: chingyai');
-            bot.chat('/register chingyai chingyai');
-        } 
-        // If the server asks to login
-        else if (msg.includes('/login')) {
-            console.log('Logging in with password: chingyai');
-            bot.chat('/login chingyai');
-        }
+        if (msg.includes('/register')) bot.chat('/register chingyai chingyai');
+        else if (msg.includes('/login')) bot.chat('/login chingyai');
     });
 
-    // 3. AUTO-RECONNECT (Stay forever)
+    // 4. STAY FOREVER REJOIN: Handles kicks AND disconnects
+    bot.on('kicked', (reason) => {
+        console.log('Kicked for:', reason, 'Rejoining in 5s...');
+    });
+
     bot.on('end', () => {
-        console.log('Disconnected. Reconnecting in 10 seconds...');
-        setTimeout(createBot, 10000); 
+        console.log('Disconnected! Reconnecting to server...');
+        setTimeout(createBot, 5000); // Tries to rejoin every 5 seconds forever
     });
 
     bot.on('error', (err) => {
-        console.log('Error encountered:', err);
+        console.log('Error:', err, 'Retrying...');
         setTimeout(createBot, 10000);
     });
 }
